@@ -2,21 +2,24 @@
 export * as Recharts from 'recharts';
 export * as LucideIcon from 'lucide-react';
 
-export {default as useGlobalDirtyState} from './hooks/use-global-dirty-state';
-export {useSimplePagination} from './hooks/use-simple-pagination';
+export { default as useGlobalDirtyState } from './hooks/use-global-dirty-state';
+export { useSimplePagination } from './hooks/use-simple-pagination';
+export { useIsMobile } from './hooks/use-mobile';
 
 export {
-    cn,
-    debounce,
-    getScrollParent,
-    kebabToPascalCase,
-    formatTimestamp,
-    formatNumber,
-    formatDuration,
-    formatPercentage,
-    formatDisplayDate,
-    formatDisplayTime,
-    getCountryFlag,
-    stringToHslColor,
-    abbreviateNumber
+  cn,
+  debounce,
+  getScrollParent,
+  kebabToPascalCase,
+  formatTimestamp,
+  formatNumber,
+  formatDuration,
+  formatPercentage,
+  getCountryFlag,
+  stringToHslColor,
+  stringToTonalAvatarClasses,
+  abbreviateNumber,
+  getYRange,
+  calculateYAxisWidth,
 } from './lib/ds-utils';
+export { formatDisplayDate, formatDisplayTime, formatDisplayDateWithRange } from './lib/date-utils';

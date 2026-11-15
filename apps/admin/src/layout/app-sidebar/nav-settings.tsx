@@ -1,42 +1,56 @@
-import React from "react"
+import React from 'react';
 
-import {SidebarGroup, SidebarGroupContent, SidebarMenu} from "@tryghost/shade/components"
-import {LucideIcon} from "@tryghost/shade/utils"
-import { useCurrentUser } from "@tryghost/admin-x-framework/api/current-user";
-import { canAccessSettings } from "@tryghost/admin-x-framework/api/users";
-import { NavMenuItem } from "./nav-menu-item";
+import { SidebarGroup, SidebarGroupContent, SidebarMenu } from '@tryghost/shade/components';
+import { LucideIcon } from '@tryghost/shade/utils';
+import { useCurrentUser } from '@tryghost/admin-x-framework/api/current-user';
+import { canAccessSettings } from '@tryghost/admin-x-framework/api/users';
+import { useFeatureFlag } from '@tryghost/admin-x-framework/hooks';
+import { NavMenuItem } from './nav-menu-item';
+import { NavGhostProItem } from './nav-ghost-pro';
+import { useSettingsReturnToState } from '@/layout/settings-navigation';
 
-function NavSettings({ ...props }: React.ComponentProps<typeof SidebarGroup>) {
-    const { data: currentUser } = useCurrentUser();
-    const showSettings = currentUser && canAccessSettings(currentUser);
+interface NavSettingsProps extends React.ComponentProps<typeof SidebarGroup> {
+  /** Admin 7 lists Ghost(Pro) here and moves Help to the account menu. */
+  admin7Design?: boolean;
+}
 
-    return (
-        <SidebarGroup {...props}>
-            <SidebarGroupContent>
-                <SidebarMenu>
-                    {showSettings && (
-                        <NavMenuItem>
-                            <NavMenuItem.Link to="settings">
-                                <LucideIcon.Settings />
-                                <NavMenuItem.Label>Settings</NavMenuItem.Label>
-                            </NavMenuItem.Link>
-                        </NavMenuItem>
-                    )}
+function NavSettings({ admin7Design = false, ...props }: NavSettingsProps) {
+  const { data: currentUser } = useCurrentUser();
+  const showSettings = currentUser && canAccessSettings(currentUser);
+  const settingsReturnToState = useSettingsReturnToState();
+  const inAppSupport = useFeatureFlag('inAppSupport');
 
-                    <NavMenuItem>
-                        <NavMenuItem.Link
-                            to="https://ghost.org/help?utm_source=admin&utm_campaign=help"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            <LucideIcon.HelpCircle />
-                            <NavMenuItem.Label>Help</NavMenuItem.Label>
-                        </NavMenuItem.Link>
-                    </NavMenuItem>
-                </SidebarMenu>
-            </SidebarGroupContent>
-        </SidebarGroup>
-    );
+  return (
+    <SidebarGroup {...props}>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {admin7Design && <NavGhostProItem />}
+          {showSettings && (
+            <NavMenuItem>
+              <NavMenuItem.Link state={settingsReturnToState} to="settings">
+                <LucideIcon.Settings />
+                <NavMenuItem.Label>Settings</NavMenuItem.Label>
+              </NavMenuItem.Link>
+            </NavMenuItem>
+          )}
+
+          {!admin7Design && (
+            <NavMenuItem>
+              <NavMenuItem.Link
+                data-ghost-help={inAppSupport ? '' : undefined}
+                rel="noopener noreferrer"
+                target="_blank"
+                to="https://ghost.org/help?utm_source=admin&utm_campaign=help"
+              >
+                <LucideIcon.HelpCircle />
+                <NavMenuItem.Label>Help</NavMenuItem.Label>
+              </NavMenuItem.Link>
+            </NavMenuItem>
+          )}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
 }
 
 export default NavSettings;

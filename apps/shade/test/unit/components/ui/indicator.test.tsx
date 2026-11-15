@@ -1,194 +1,221 @@
-import assert from 'assert/strict';
-import {describe, it} from 'vitest';
-import {screen} from '@testing-library/react';
-import {Indicator} from '../../../../src/components/ui/indicator';
-import {render} from '../../utils/test-utils';
+import { describe, expect, it } from 'vitest';
+import { screen } from '@testing-library/react';
+import { Indicator } from '../../../../src/components/ui/indicator';
+import { render } from '../../utils/test-utils';
 
 describe('Indicator Component', () => {
-    it('renders correctly with default props', () => {
-        render(<Indicator data-testid="indicator" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('renders correctly with default props', () => {
+    render(<Indicator data-testid="indicator" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(container, 'Indicator container should be rendered');
-        assert.ok(indicator, 'Indicator dot should be rendered');
-        assert.ok(indicator?.className.includes('bg-state-success'), 'Should have success variant class by default');
-        assert.ok(indicator?.className.includes('size-2'), 'Should have small size by default');
-        assert.ok(!indicator?.className.includes('animate-pulse'), 'Should not be pulsing in idle state');
-        assert.ok(!indicator?.className.includes('border'), 'Should not have border in idle state');
-    });
+    expect(container, 'Indicator container should be rendered').toBeTruthy();
+    expect(indicator, 'Indicator dot should be rendered').toBeTruthy();
+    expect(indicator?.className, 'Should have success variant class by default').toContain(
+      'bg-state-success',
+    );
+    expect(indicator?.className, 'Should have small size by default').toContain('size-2');
+    expect(indicator?.className, 'Should not be pulsing in idle state').not.toContain(
+      'animate-pulse',
+    );
+    expect(indicator?.className, 'Should not have border in idle state').not.toContain('border');
+  });
 
-    it('applies neutral variant correctly', () => {
-        render(<Indicator data-testid="indicator" variant="neutral" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('applies neutral variant correctly', () => {
+    render(<Indicator data-testid="indicator" variant="neutral" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator?.className.includes('bg-muted'), 'Should have neutral variant class');
-    });
+    expect(indicator?.className, 'Should have neutral variant class').toContain('bg-muted');
+  });
 
-    it('applies info variant correctly', () => {
-        render(<Indicator data-testid="indicator" variant="info" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('applies info variant correctly', () => {
+    render(<Indicator data-testid="indicator" variant="info" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator?.className.includes('bg-state-info'), 'Should have info variant class');
-    });
+    expect(indicator?.className, 'Should have info variant class').toContain('bg-state-info');
+  });
 
-    it('applies success variant correctly', () => {
-        render(<Indicator data-testid="indicator" variant="success" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('applies success variant correctly', () => {
+    render(<Indicator data-testid="indicator" variant="success" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator?.className.includes('bg-state-success'), 'Should have success variant class');
-    });
+    expect(indicator?.className, 'Should have success variant class').toContain('bg-state-success');
+  });
 
-    it('applies error variant correctly', () => {
-        render(<Indicator data-testid="indicator" variant="error" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('applies error variant correctly', () => {
+    render(<Indicator data-testid="indicator" variant="error" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator?.className.includes('bg-state-danger'), 'Should have error variant class');
-    });
+    expect(indicator?.className, 'Should have error variant class').toContain('bg-state-danger');
+  });
 
-    it('applies warning variant correctly', () => {
-        render(<Indicator data-testid="indicator" variant="warning" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('applies warning variant correctly', () => {
+    render(<Indicator data-testid="indicator" variant="warning" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator?.className.includes('bg-state-warning'), 'Should have warning variant class');
-    });
+    expect(indicator?.className, 'Should have warning variant class').toContain('bg-state-warning');
+  });
 
-    it('applies idle state correctly', () => {
-        render(<Indicator data-testid="indicator" state="idle" variant="success" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('applies idle state correctly', () => {
+    render(<Indicator data-testid="indicator" state="idle" variant="success" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator?.className.includes('bg-state-success'), 'Should have solid background');
-        assert.ok(!indicator?.className.includes('animate-pulse'), 'Should not be pulsing in idle state');
-        assert.ok(!indicator?.className.includes('border'), 'Should not have border');
-    });
+    expect(indicator?.className, 'Should have solid background').toContain('bg-state-success');
+    expect(indicator?.className, 'Should not be pulsing in idle state').not.toContain(
+      'animate-pulse',
+    );
+    expect(indicator?.className, 'Should not have border').not.toContain('border');
+  });
 
-    it('applies active state correctly', () => {
-        render(<Indicator data-testid="indicator" state="active" variant="success" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('applies active state correctly', () => {
+    render(<Indicator data-testid="indicator" state="active" variant="success" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator?.className.includes('animate-pulse'), 'Should have pulsing animation class');
-        assert.ok(indicator?.className.includes('bg-state-success'), 'Should maintain variant color');
-    });
+    expect(indicator?.className, 'Should have pulsing animation class').toContain('animate-pulse');
+    expect(indicator?.className, 'Should maintain variant color').toContain('bg-state-success');
+  });
 
-    it('applies inactive state with neutral variant correctly', () => {
-        render(<Indicator data-testid="indicator" state="inactive" variant="neutral" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('applies inactive state with neutral variant correctly', () => {
+    render(<Indicator data-testid="indicator" state="inactive" variant="neutral" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator?.className.includes('border'), 'Should have border class');
-        assert.ok(indicator?.className.includes('bg-transparent'), 'Should have transparent background class');
-        assert.ok(indicator?.className.includes('border-muted-foreground'), 'Should have grey border for neutral variant');
-    });
+    expect(indicator?.className, 'Should have border class').toContain('border');
+    expect(indicator?.className, 'Should have transparent background class').toContain(
+      'bg-transparent',
+    );
+    expect(indicator?.className, 'Should have grey border for neutral variant').toContain(
+      'border-muted-foreground',
+    );
+  });
 
-    it('applies inactive state with info variant correctly', () => {
-        render(<Indicator data-testid="indicator" state="inactive" variant="info" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('applies inactive state with info variant correctly', () => {
+    render(<Indicator data-testid="indicator" state="inactive" variant="info" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator?.className.includes('border'), 'Should have border class');
-        assert.ok(indicator?.className.includes('bg-transparent'), 'Should have transparent background class');
-        assert.ok(indicator?.className.includes('border-state-info'), 'Should have info border variant');
-    });
+    expect(indicator?.className, 'Should have border class').toContain('border');
+    expect(indicator?.className, 'Should have transparent background class').toContain(
+      'bg-transparent',
+    );
+    expect(indicator?.className, 'Should have info border variant').toContain('border-state-info');
+  });
 
-    it('applies inactive state with success variant correctly', () => {
-        render(<Indicator data-testid="indicator" state="inactive" variant="success" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('applies inactive state with success variant correctly', () => {
+    render(<Indicator data-testid="indicator" state="inactive" variant="success" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator?.className.includes('border'), 'Should have border class');
-        assert.ok(indicator?.className.includes('bg-transparent'), 'Should have transparent background class');
-        assert.ok(indicator?.className.includes('border-state-success'), 'Should have success border variant');
-    });
+    expect(indicator?.className, 'Should have border class').toContain('border');
+    expect(indicator?.className, 'Should have transparent background class').toContain(
+      'bg-transparent',
+    );
+    expect(indicator?.className, 'Should have success border variant').toContain(
+      'border-state-success',
+    );
+  });
 
-    it('applies inactive state with error variant correctly', () => {
-        render(<Indicator data-testid="indicator" state="inactive" variant="error" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('applies inactive state with error variant correctly', () => {
+    render(<Indicator data-testid="indicator" state="inactive" variant="error" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator?.className.includes('border'), 'Should have border class');
-        assert.ok(indicator?.className.includes('bg-transparent'), 'Should have transparent background class');
-        assert.ok(indicator?.className.includes('border-state-danger'), 'Should have error border variant');
-    });
+    expect(indicator?.className, 'Should have border class').toContain('border');
+    expect(indicator?.className, 'Should have transparent background class').toContain(
+      'bg-transparent',
+    );
+    expect(indicator?.className, 'Should have error border variant').toContain(
+      'border-state-danger',
+    );
+  });
 
-    it('applies inactive state with warning variant correctly', () => {
-        render(<Indicator data-testid="indicator" state="inactive" variant="warning" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('applies inactive state with warning variant correctly', () => {
+    render(<Indicator data-testid="indicator" state="inactive" variant="warning" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator?.className.includes('border'), 'Should have border class');
-        assert.ok(indicator?.className.includes('bg-transparent'), 'Should have transparent background class');
-        assert.ok(indicator?.className.includes('border-state-warning'), 'Should have warning border variant');
-    });
+    expect(indicator?.className, 'Should have border class').toContain('border');
+    expect(indicator?.className, 'Should have transparent background class').toContain(
+      'bg-transparent',
+    );
+    expect(indicator?.className, 'Should have warning border variant').toContain(
+      'border-state-warning',
+    );
+  });
 
-    it('applies different sizes correctly', () => {
-        const {rerender} = render(<Indicator data-testid="indicator" size="sm" />);
-        let container = screen.getByTestId('indicator');
-        let indicator = container.querySelector('[aria-hidden="true"]');
-        assert.ok(indicator?.className.includes('size-2'), 'Should have small size class');
+  it('applies different sizes correctly', () => {
+    const { rerender } = render(<Indicator data-testid="indicator" size="sm" />);
+    let container = screen.getByTestId('indicator');
+    let indicator = container.querySelector('[aria-hidden="true"]');
+    expect(indicator?.className, 'Should have small size class').toContain('size-2');
 
-        rerender(<Indicator data-testid="indicator" size="md" />);
-        container = screen.getByTestId('indicator');
-        indicator = container.querySelector('[aria-hidden="true"]');
-        assert.ok(indicator?.className.includes('size-3'), 'Should have medium size class');
+    rerender(<Indicator data-testid="indicator" size="md" />);
+    container = screen.getByTestId('indicator');
+    indicator = container.querySelector('[aria-hidden="true"]');
+    expect(indicator?.className, 'Should have medium size class').toContain('size-3');
 
-        rerender(<Indicator data-testid="indicator" size="lg" />);
-        container = screen.getByTestId('indicator');
-        indicator = container.querySelector('[aria-hidden="true"]');
-        assert.ok(indicator?.className.includes('size-4'), 'Should have large size class');
-    });
+    rerender(<Indicator data-testid="indicator" size="lg" />);
+    container = screen.getByTestId('indicator');
+    indicator = container.querySelector('[aria-hidden="true"]');
+    expect(indicator?.className, 'Should have large size class').toContain('size-4');
+  });
 
-    it('combines variant and state correctly', () => {
-        render(<Indicator data-testid="indicator" state="active" variant="error" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('combines variant and state correctly', () => {
+    render(<Indicator data-testid="indicator" state="active" variant="error" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator?.className.includes('bg-state-danger'), 'Should have error variant color');
-        assert.ok(indicator?.className.includes('animate-pulse'), 'Should have active animation');
-    });
+    expect(indicator?.className, 'Should have error variant color').toContain('bg-state-danger');
+    expect(indicator?.className, 'Should have active animation').toContain('animate-pulse');
+  });
 
-    it('applies custom className correctly', () => {
-        render(<Indicator className="custom-class" data-testid="indicator" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('applies custom className correctly', () => {
+    render(<Indicator className="custom-class" data-testid="indicator" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator?.className.includes('custom-class'), 'Should have custom class');
-    });
+    expect(indicator?.className, 'Should have custom class').toContain('custom-class');
+  });
 
-    it('renders screen reader label when provided', () => {
-        render(<Indicator label="Test label" />);
-        const srLabel = screen.getByText('Test label');
+  it('renders screen reader label when provided', () => {
+    render(<Indicator label="Test label" />);
+    const srLabel = screen.getByText('Test label');
 
-        assert.ok(srLabel, 'Screen reader label should be rendered');
-        assert.ok(srLabel.className.includes('sr-only'), 'Should have sr-only class');
-    });
+    expect(srLabel, 'Screen reader label should be rendered').toBeTruthy();
+    expect(srLabel.className, 'Should have sr-only class').toContain('sr-only');
+  });
 
-    it('does not render screen reader label when not provided', () => {
-        const {container} = render(<Indicator data-testid="indicator" />);
-        const srLabels = container.querySelectorAll('.sr-only');
+  it('does not render screen reader label when not provided', () => {
+    const { container } = render(<Indicator data-testid="indicator" />);
+    const srLabels = container.querySelectorAll('.sr-only');
 
-        assert.equal(srLabels.length, 0, 'Should not render screen reader label');
-    });
+    expect(srLabels.length, 'Should not render screen reader label').toBe(0);
+  });
 
-    it('sets aria-hidden on the indicator dot', () => {
-        render(<Indicator data-testid="indicator" />);
-        const container = screen.getByTestId('indicator');
-        const indicator = container.querySelector('[aria-hidden="true"]');
+  it('sets aria-hidden on the indicator dot', () => {
+    render(<Indicator data-testid="indicator" />);
+    const container = screen.getByTestId('indicator');
+    const indicator = container.querySelector('[aria-hidden="true"]');
 
-        assert.ok(indicator, 'Indicator dot should exist');
-        assert.equal(indicator?.getAttribute('aria-hidden'), 'true', 'Should have aria-hidden attribute on dot');
-    });
+    expect(indicator, 'Indicator dot should exist').toBeTruthy();
+    expect(indicator?.getAttribute('aria-hidden'), 'Should have aria-hidden attribute on dot').toBe(
+      'true',
+    );
+  });
 
-    it('passes additional props to the container span element', () => {
-        render(<Indicator data-custom="value" data-testid="indicator-test" />);
-        const container = screen.getByTestId('indicator-test');
+  it('passes additional props to the container span element', () => {
+    render(<Indicator data-custom="value" data-testid="indicator-test" />);
+    const container = screen.getByTestId('indicator-test');
 
-        assert.equal(container.getAttribute('data-custom'), 'value', 'Should pass additional props to container');
-    });
+    expect(container.getAttribute('data-custom'), 'Should pass additional props to container').toBe(
+      'value',
+    );
+  });
 });

@@ -1,67 +1,74 @@
-import { useState } from "react";
-import {Banner} from "@tryghost/shade/components";
-import {LucideIcon} from "@tryghost/shade/utils";
-import { useWhatsNew, useDismissWhatsNew } from "@/whats-new/hooks/use-whats-new";
-import { useChangelog } from "@/whats-new/hooks/use-changelog";
+import { useState } from 'react';
+import { Banner } from '@tryghost/shade/components';
+import { LucideIcon } from '@tryghost/shade/utils';
+import { useFeatureFlag } from '@tryghost/admin-x-framework/hooks';
+import { useWhatsNew, useDismissWhatsNew } from '@/whats-new/hooks/use-whats-new';
+import { useChangelog } from '@/whats-new/hooks/use-changelog';
 
 function WhatsNewBanner() {
-    const { data: whatsNewData } = useWhatsNew();
-    const { data: changelog } = useChangelog();
-    const { mutate: dismissWhatsNew } = useDismissWhatsNew();
-    const [isDismissed, setIsDismissed] = useState(false);
+  const { hasNew } = useWhatsNew();
+  const { data: changelog } = useChangelog();
+  const { mutate: dismissWhatsNew } = useDismissWhatsNew();
+  const [isDismissed, setIsDismissed] = useState(false);
+  // The floating sidebar holds its banners inside the capsule, so their glow stays within it
+  const admin7Design = useFeatureFlag('admin7Design');
 
-    // Don't show if dismissed or no new content
-    if (isDismissed || !whatsNewData?.hasNew) {
-        return null;
-    }
+  // Don't show if dismissed or no new content
+  if (isDismissed || !hasNew) {
+    return null;
+  }
 
-    const latestEntry = changelog?.entries[0];
-    if (!latestEntry) {
-        return null;
-    }
+  const latestEntry = changelog?.entries[0];
+  if (!latestEntry) {
+    return null;
+  }
 
-    const handleDismiss = () => {
-        setIsDismissed(true);
-        dismissWhatsNew();
-    };
+  const handleDismiss = () => {
+    setIsDismissed(true);
+    dismissWhatsNew();
+  };
 
-    const handleLinkClick = () => {
-        // Mark as seen when navigating to the changelog
-        dismissWhatsNew();
-    };
+  const handleLinkClick = () => {
+    // Mark as seen when navigating to the changelog
+    dismissWhatsNew();
+  };
 
-    return (
-        <Banner
-            data-test-toast="whats-new"
-            className="mx-2"
-            role="status"
-            aria-label="What’s new notification"
-            aria-live="polite"
-            variant="gradient"
-            dismissible
-            onDismiss={handleDismiss}
+  return (
+    <Banner
+      aria-label="What’s new notification"
+      aria-live="polite"
+      className="mx-2"
+      data-testid="whats-new-banner"
+      role="status"
+      variant={admin7Design ? 'gradient-inline' : 'gradient'}
+      dismissible
+      onDismiss={handleDismiss}
+    >
+      <a
+        className="block pr-8"
+        href={latestEntry.url}
+        rel="noopener noreferrer"
+        target="_blank"
+        onClick={handleLinkClick}
+      >
+        <div className="mb-2 flex items-center gap-2">
+          <LucideIcon.Sparkles className="size-4 text-purple-600 dark:text-purple" />
+          <span className="text-xs font-semibold tracking-wide text-gray-700 uppercase dark:text-gray-400">
+            What’s new?
+          </span>
+        </div>
+        <div
+          className="mb-1 text-base font-semibold text-gray-900 dark:text-foreground"
+          data-testid="whats-new-banner-title"
         >
-            <a
-                href={latestEntry.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block pr-8"
-                onClick={handleLinkClick}
-                data-test-toast-link
-            >
-                <div className="mb-2 flex items-center gap-2">
-                    <LucideIcon.Sparkles className="size-4 text-purple-600 dark:text-purple" />
-                    <span className="text-xs font-semibold tracking-wide text-gray-700 uppercase dark:text-gray-400">What’s new?</span>
-                </div>
-                <div className="mb-1 text-base font-semibold text-gray-900 dark:text-foreground" data-test-toast-title>
-                    {latestEntry.title}
-                </div>
-                <div className="text-sm text-gray-700" data-test-toast-excerpt>
-                    {latestEntry.customExcerpt}
-                </div>
-            </a>
-        </Banner>
-    );
+          {latestEntry.title}
+        </div>
+        <div className="text-sm text-gray-700" data-testid="whats-new-banner-excerpt">
+          {latestEntry.customExcerpt}
+        </div>
+      </a>
+    </Banner>
+  );
 }
 
 export default WhatsNewBanner;

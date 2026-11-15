@@ -10,7 +10,8 @@ cd "$REPO_ROOT"
 MODE="$(resolve_e2e_mode)"
 export GHOST_E2E_MODE="$MODE"
 ANALYTICS_ENABLED="${GHOST_E2E_ANALYTICS:-true}"
-MYSQL_TMPFS_ENABLED="${GHOST_E2E_MYSQL_TMPFS:-true}"
+# Locally this is every checkout's dev MySQL: tmpfs recreates it without their databases.
+MYSQL_TMPFS_ENABLED="${GHOST_E2E_MYSQL_TMPFS:-false}"
 
 if [[ "$MODE" != "build" ]]; then
   DEV_COMPOSE_PROJECT="${COMPOSE_PROJECT_NAME:-ghost-dev}"
@@ -26,7 +27,7 @@ fi
 compose_files=(-f compose.dev.yaml)
 services=(mysql redis mailpit)
 
-if [[ "$MODE" == "build" && "$MYSQL_TMPFS_ENABLED" != "false" ]]; then
+if [[ "$MODE" == "build" && "$MYSQL_TMPFS_ENABLED" == "true" ]]; then
   compose_files+=(-f e2e/compose.e2e.tmpfs.yaml)
 fi
 

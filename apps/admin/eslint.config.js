@@ -1,94 +1,44 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import tailwindcss from 'eslint-plugin-tailwindcss'
-import tseslint from 'typescript-eslint'
-import { globalIgnores } from 'eslint/config'
-import noRelativeImportPaths from 'eslint-plugin-no-relative-import-paths'
-import ghostPlugin from 'eslint-plugin-ghost';
+import noRelativeImportPaths from 'eslint-plugin-no-relative-import-paths';
+import * as tseslint from 'typescript-eslint';
+import { reactAppConfig } from '@internal/cfg-eslint-react';
+import { shadeLayeredImportsRule } from '@internal/cfg-eslint';
 
-import {correctnessRules, shadeLayeredImportsRule, strictLinterOptions} from '../../eslint.shared.mjs';
+// The factory's shade restriction and this file's boundary bans share the
+// `no-restricted-imports` rule slot, so the boundary blocks must re-include it.
+const shadeRestrictedPaths = shadeLayeredImportsRule['no-restricted-imports'][1].paths;
 
-const noHardcodedGhostPaths = {
-  meta: {
-    type: 'problem',
-    docs: {
-      description: 'Disallow hardcoded /ghost/ paths that break subdirectory installations',
+export default tseslint.config(
+  ...reactAppConfig({
+    tailwindCssPath: `${import.meta.dirname}/src/index.css`,
+    shadeRestricted: true,
+    ignores: ['dist/**/*', 'test-utils/acceptance/public/**/*'],
+    // One uniform block: src, test-utils, and the root vite/vitest configs
+    // all get the same rules (matching this workspace's historical setup).
+    srcGlobs: ['**/*.{ts,tsx}'],
+    testGlobs: false,
+    extraSrcRules: {
+      // The factory disables this (legacy violations elsewhere); this
+      // workspace is clean, so keep enforcing it.
+      'react-refresh/only-export-components': [
+        'error',
+        { allowConstantExport: true, extraHOCs: ['withErrorBoundary'] },
+      ],
     },
-    messages: {
-      noHardcodedPath: 'Do not hardcode /ghost/ paths. Use getGhostPaths() from @tryghost/admin-x-framework/helpers to support subdirectory installations.',
-    },
-  },
-  create(context) {
-    const pattern = /^\/ghost\//;
-    return {
-      Literal(node) {
-        if (typeof node.value === 'string' && pattern.test(node.value)) {
-          context.report({node, messageId: 'noHardcodedPath'});
-        }
-      },
-      TemplateLiteral(node) {
-        const first = node.quasis[0];
-        if (first && pattern.test(first.value.raw)) {
-          context.report({node, messageId: 'noHardcodedPath'});
-        }
-      },
-    };
-  },
-};
-
-const localPlugin = {
-  rules: {
-    'no-hardcoded-ghost-paths': noHardcodedGhostPaths,
-  },
-};
-const tailwindCssConfig = `${import.meta.dirname}/src/index.css`;
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {files: ['**/*'], ...strictLinterOptions},
+  }),
+  // The factory is type-unaware; layer the type-checked rule set on top.
   {
     files: ['**/*.{ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommendedTypeChecked,
-      reactHooks.configs['recommended-latest'],
-      reactRefresh.configs.vite,
-    ],
-    plugins: {
-      'no-relative-import-paths': noRelativeImportPaths,
-      ghost: ghostPlugin,
-      local: localPlugin,
-      tailwindcss,
-    },
+    extends: [...tseslint.configs.recommendedTypeCheckedOnly],
     languageOptions: {
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
-      ecmaVersion: 2020,
-      globals: globals.browser,
-    },
-    settings: {
-      tailwindcss: {
-        cssConfigPath: tailwindCssConfig,
-      },
-    },
-    rules: {
-      ...correctnessRules,
-      ...shadeLayeredImportsRule,
-      'tailwindcss/classnames-order': 'error',
-      'tailwindcss/no-contradicting-classname': 'error',
-      // Leaked warn from reactHooks.configs['recommended-latest']. The shared
-      // factory drops this to 'off' across the rest of the React apps; this
-      // workspace isn't on the factory yet, so override explicitly.
-      'react-hooks/exhaustive-deps': 'off',
     },
   },
-  // Apply no-relative-import-paths rule for src files (auto-fix supported)
   {
     files: ['src/**/*.{ts,tsx}'],
+    plugins: { 'no-relative-import-paths': noRelativeImportPaths },
     rules: {
       'no-relative-import-paths/no-relative-import-paths': [
         'error',
@@ -96,24 +46,91 @@ export default tseslint.config([
       ],
     },
   },
-  // Prevent hardcoded /ghost/ paths in production code (not tests, where mocks need fixed paths)
+  // Autofix can produce wrong paths for cross-directory imports here; use
+  // @/* for src/ and @test-utils/* for test-utils/ manually.
+  {
+    files: ['test-utils/**/*.{ts,tsx}'],
+    plugins: { 'no-relative-import-paths': noRelativeImportPaths },
+    rules: {
+      'no-relative-import-paths/no-relative-import-paths': ['error', { allowSameFolder: true }],
+    },
+  },
+  // Boundary guardrails. Product code must reach react-router and the Admin
+  // API through their owning layers.
   {
     files: ['src/**/*.{ts,tsx}'],
     ignores: ['src/**/*.test.*'],
     rules: {
-      'local/no-hardcoded-ghost-paths': 'error',
-    },
-  },
-  // Apply no-relative-import-paths rule for test-utils files
-  // Note: auto-fix may produce incorrect paths for cross-directory imports
-  // Use the correct alias manually: @/* for src/, @test-utils/* for test-utils/
-  {
-    files: ['test-utils/**/*.{ts,tsx}'],
-    rules: {
-      'no-relative-import-paths/no-relative-import-paths': [
+      'no-restricted-imports': [
         'error',
-        { allowSameFolder: true },
+        {
+          paths: [
+            ...shadeRestrictedPaths,
+            {
+              name: '@tryghost/app-contracts/identity',
+              message:
+                'App identity is for servers: it loads jose. Act on what the Admin API reports about an app instead.',
+            },
+            {
+              name: 'react-router',
+              message:
+                'Import routing APIs (and their types) from @tryghost/admin-x-framework instead of react-router directly.',
+            },
+          ],
+          patterns: [
+            {
+              group: ['react-router/*'],
+              message:
+                'Import routing APIs (and their types) from @tryghost/admin-x-framework instead of react-router directly.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.name='fetch']",
+          message:
+            'Admin API requests belong in the @tryghost/admin-x-framework API layer. For non-Ghost URLs (external services, front-end previews), disable this rule for the line with a reason.',
+        },
+        {
+          selector: "CallExpression[callee.object.name='window'][callee.property.name='fetch']",
+          message:
+            'Admin API requests belong in the @tryghost/admin-x-framework API layer. For non-Ghost URLs (external services, front-end previews), disable this rule for the line with a reason.',
+        },
+        {
+          selector: "CallExpression[callee.object.name='globalThis'][callee.property.name='fetch']",
+          message:
+            'Admin API requests belong in the @tryghost/admin-x-framework API layer. For non-Ghost URLs (external services, front-end previews), disable this rule for the line with a reason.',
+        },
       ],
     },
   },
-])
+  // Test files keep react-router scaffolding (MemoryRouter, createMemoryRouter).
+  {
+    files: ['src/**/*.test.*'],
+    rules: {
+      'no-restricted-imports': ['error', { paths: [...shadeRestrictedPaths] }],
+    },
+  },
+  // Advisory only — warnings do not fail CI (`eslint .` without --max-warnings).
+  // Steers new code to the shade utilities without forcing a bulk conversion.
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/**/*.test.*'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'warn',
+        {
+          paths: [
+            { name: 'clsx', message: 'Use cn from @tryghost/shade/utils.' },
+            {
+              name: 'lucide-react',
+              message: 'Use the LucideIcon namespace from @tryghost/shade/utils.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+);

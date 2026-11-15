@@ -5,23 +5,33 @@
 
 services:
   analytics:
-    image: ghost/traffic-analytics:1.0.258@sha256:86e5e4ebf75e0d277be1403b4e874f4311b53bfe1394c9bdb9752e117a881885
+    image: ghost/traffic-analytics:1.0.440@sha256:045a958d001b8d8543a410aa414fbd50bdba5ee50b80beb22d8b10275cee1613
     container_name: ghost-dev-analytics
     platform: linux/amd64
-    command: ["node", "--enable-source-maps", "dist/server.js"]
-    entrypoint: ["/app/entrypoint.sh"]
+    command: ['node', '--enable-source-maps', 'dist/server.js']
+    entrypoint: ['/app/entrypoint.sh']
     expose:
-      - "3000"
+      - '3000'
+    # The Admin dev server proxies /.ghost/analytics/ here
+    ports:
+      - '127.0.0.1:7182:3000'
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))\""]
-      interval: 1s
-      retries: 120
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "fetch(''http://localhost:3000'').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"',
+        ]
+      interval: 30s
+      retries: 5
+      start_period: 120s
+      start_interval: 1s
     volumes:
       - ./docker/analytics/entrypoint.sh:/app/entrypoint.sh:ro
       - shared-config:/mnt/shared-config:ro
     environment:
       - PROXY_TARGET=http://tinybird-local:7181/v0/events
       - TINYBIRD_WAIT=true
+      - TINYBIRD_SYNC_AUTH=${TINYBIRD_SYNC_AUTH:-test-sync-auth}
     depends_on:
       tinybird-local:
         condition: service_healthy
@@ -29,33 +39,57 @@ services:
         condition: service_completed_successfully
 
   tinybird-local:
-    image: tinybirdco/tinybird-local:latest@sha256:6f01c3da78ea96d166e2ff3aa91c3bbf1f9b9dc088214802525fbb193f6d3d52
+    image: tinybirdco/tinybird-local:latest@sha256:17bf5d10c191e246dfe7daad775b83bae04a36113336a02761ba9f1cd57a9752
     container_name: ghost-dev-tinybird
     platform: linux/amd64
     stop_grace_period: 2s
+    environment:
+      - TB_LOCAL_CSV_WORKERS=1
+      # Ghost uses neither the MCP server nor Kafka connectors; skipping them
+      # saves ~350MB of idle memory.
+      - TB_LOCAL_MCP=false
+      - TB_LOCAL_KAFKA=false
     ports:
-      - "7181:7181"
+      - '7181:7181'
+    volumes:
+      - tinybird-clickhouse:/var/lib/clickhouse
+      - tinybird-metadata:/redis-data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7181/v0/health"]
-      interval: 1s
+      test: ['CMD', 'curl', '-f', 'http://localhost:7181/v0/health']
+      interval: 30s
       timeout: 5s
-      retries: 120
+      retries: 5
+      start_period: 120s
+      start_interval: 1s
 
   tb-cli:
-    build:
+    build: &tb-cli-build
       context: ./
       dockerfile: docker/tb-cli/Dockerfile
     container_name: ghost-dev-tb-cli
     working_dir: /home/tinybird
-    environment:
+    environment: &tb-cli-environment
       - TB_HOST=http://tinybird-local:7181
       - TB_LOCAL_HOST=tinybird-local
     volumes:
-      - ./ghost/core/core/server/data/tinybird:/home/tinybird
+      - ./ghost/core/server/data/tinybird:/home/tinybird
       - shared-config:/mnt/shared-config
     depends_on:
       tinybird-local:
         condition: service_healthy
+
+  tb-watch:
+    build: *tb-cli-build
+    container_name: ghost-dev-tb-watch
+    working_dir: /home/tinybird
+    # Keep initialization in tb-cli so Ghost can wait for it to finish.
+    entrypoint: ['tb', '--local', 'dev']
+    environment: *tb-cli-environment
+    volumes:
+      - ./ghost/core/server/data/tinybird:/home/tinybird
+    depends_on:
+      tb-cli:
+        condition: service_completed_successfully
 
   ghost-dev:
     volumes:
@@ -64,7 +98,7 @@ services:
     environment:
       # Analytics configuration
       analytics__url: http://analytics:3000
-      analytics__enabled: "true"
+      analytics__enabled: 'true'
       # Tinybird configuration
       # These static values are set here; workspaceId and adminToken are sourced from
       # /mnt/shared-config/.env.tinybird by docker/ghost-dev/entrypoint.sh
@@ -74,6 +108,7 @@ services:
       tinybird__stats__endpointBrowser: http://localhost:7181
       tinybird__tracker__endpoint: http://localhost:2368/.ghost/analytics/api/v1/page_hit
       tinybird__tracker__datasource: analytics_events
+      tinybird__sync_auth_key: ${TINYBIRD_SYNC_AUTH:-test-sync-auth}
     depends_on:
       analytics:
         condition: service_healthy
@@ -82,5 +117,5 @@ services:
 
 volumes:
   shared-config:
-
-
+  tinybird-clickhouse:
+  tinybird-metadata:

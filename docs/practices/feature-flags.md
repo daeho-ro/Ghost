@@ -1,0 +1,349 @@
+# Feature flags
+
+Ghost uses feature flags, usually called Labs flags, to merge work before it is
+ready for everyone, offer beta features, and disable a feature without removing
+its code.
+
+A feature flag should be temporary. It controls whether a code path is active;
+it is not a replacement for a permanent product setting, configuration
+requirement, permission, or host limit.
+
+## Choose the right gate
+
+Use a Labs flag when a feature needs to move through development, beta, or a
+controlled rollout before becoming generally available.
+
+Use the underlying condition directly when availability will always depend on
+it. For example, a feature which requires configured credentials must still
+check for those credentials after its Labs flag is removed. If both conditions
+matter during development, check both explicitly.
+
+Do not use a Labs flag as an Admin/server compatibility check. Admin and Ghost
+Core deploy independently, so a flag may be visible before the endpoint,
+setting, or response field needed by the UI exists. Admin must detect the
+backend capability and handle the older-server case separately.
+
+One exception: a new member custom field type is built behind a Labs flag that
+also decides when Admin offers it. That holds only because the flag is switched
+on after every Ghost(Pro) server has the type's code, and only creating a field
+of the type is gated. See
+[why a new field type starts behind a flag](../../packages/metafield-types/docs/explanation/why-a-new-field-type-starts-behind-a-flag.md).
+
+## Flag stages
+
+Flags are camelCase keys registered in
+`ghost/core/shared/labs.js`:
+
+| List                   | Use                                         | Normal Admin surface                                    |
+| ---------------------- | ------------------------------------------- | ------------------------------------------------------- |
+| `PRIVATE_FEATURES`     | Development and private experiments         | Private features when developer experiments are enabled |
+| `PUBLIC_BETA_FEATURES` | Opt-in public beta                          | Beta features                                           |
+| `GA_FEATURES`          | Short transition after general availability | Nobody; the value defaults to `true`                    |
+
+Private and public beta flags are stored together in the site's `labs` setting.
+The lists control which keys the settings API will accept. Admin's toggle lists
+are maintained separately, so moving a flag between stages also requires an
+explicit UI change. GA flags are no longer writable.
+
+The normal lifecycle is:
+
+```text
+private or public beta → GA → remove the flag and old branch
+```
+
+`GA_FEATURES` makes a flag default to on without immediately changing every
+call site. It is a short cleanup step, not a permanent home for released flags.
+
+## Add a flag
+
+1. Add the key to `PRIVATE_FEATURES` or `PUBLIC_BETA_FEATURES` in
+   `ghost/core/shared/labs.js`.
+2. Add the matching toggle to
+   `apps/admin/src/settings/advanced/labs/private-features.tsx` or
+   `apps/admin/src/settings/advanced/labs/beta-features.tsx`.
+3. Gate the server and browser behavior that must ship together.
+4. Add tests for both the enabled and disabled behavior.
+5. Update and review the Admin config and settings API snapshots.
+
+The key must match everywhere. No database migration is needed because Labs
+values live in the existing JSON setting.
+
+## Read a flag
+
+In Ghost Core, use the shared Labs service:
+
+```js
+const labs = require('../../../shared/labs');
+
+if (labs.isSet('myFeature')) {
+  // flagged behavior
+}
+```
+
+Use `labs.enabledMiddleware('myFeature')` when an entire API route should return
+404 while disabled. Theme helpers can read the computed value from
+`@labs.myFeature`; a helper which must report a disabled-feature error can use
+`labs.enabledHelper(...)`.
+
+In Admin, use `useFeatureFlag` from
+`@tryghost/admin-x-framework/hooks`. It returns `true` when the server-computed
+value in the Admin config response is boolean `true` or the flag is enabled by
+an Admin session override. Without an override, it returns `false` while the
+response is missing or loading.
+
+Keep the decision at the boundary that owns the behavior. Hiding a button does
+not protect a server endpoint, and rejecting an endpoint does not give Admin a
+usable disabled state.
+
+## Admin 7 milestones
+
+Admin 7 milestones use ordinary private Labs flags with stable, descriptive
+`admin7`-prefixed keys and labels that identify their milestone and purpose.
+Follow the same registration and lifecycle as any other private flag.
+
+Read the current milestone's flag with `useFeatureFlag` at the boundary that
+owns the change, keeping any availability checks beside it. When a milestone
+changes shared design, Shade gets a switch named exactly after its flag: Admin
+passes `useFeatureFlag('admin7Design')` to ShadeApp's `admin7Design` prop,
+components read `useShade().admin7Design`, and tokens are scoped by the
+`data-admin7-design` attribute that ShadeApp and Shade's portals carry. Delete
+the switch together with its flag. Don't reuse one generic switch across
+milestones: a switch that outlives its flag no longer says what it controls.
+
+Keep shared appearance in Shade and page-specific structure in the page. Build
+the enabled design as the intended default so retiring a flag means removing
+compatibility branches, without changing ordinary component calls. Document
+milestone-specific scope and exclusions alongside the affected design.
+
+Test the flag boundary and preserve existing behavioral coverage. Styling-only
+changes need visual review, not tests that assert appearance. Keep permanent
+permission and backend capability checks independent of the temporary flag.
+
+With `admin7Design` on, Shade's `Tabs` defaults to underline and respects
+explicit variants. Button tabs, including Settings previews, and route-based
+`PageMenu` use the previous inactive fill for selection, while inactive items
+have a transparent surface and an outline matching the header divider
+(`border-border`). The active fill stays unchanged on hover; pressed and
+expanded items use the ghost-button background. Compact button tabs keep their
+smaller size, and KPI tabs keep their chart-card layout. With the flag off,
+the default remains segmented and explicit underline tabs keep their previous
+styling. Only the enabled design uses a 1px indicator aligned with the divider
+and prevents vertical scrolling within the tab row. Underline tabs use 14px
+labels and 10px vertical padding, with regular inactive text and semibold
+selected text. Hidden semibold label copies reserve the selected width, so
+switching tabs does not move adjacent tabs. Copies are hidden from assistive
+technology, and count badges and icons are rendered only once. Shared field surfaces are
+flat; the enabled design no longer adds a resting shadow. Screens do not need
+their own flag branch for these shared appearances.
+
+The pill-controls milestone is generally available in Admin. Standalone
+ActivityPub uses Shade's current default.
+
+Settings navigation is generally available in Admin. It replaces the shell
+navigation on desktop. Mobile retains the full-screen Settings takeover, with
+its return control and search inside Settings. Editors retain the app navigation
+because their Settings access is limited; Authors only receive their profile route.
+
+The `admin7Design` milestone replaces the docked desktop sidebar with Shade's
+`FloatingSidebar`: pinned beside the content by default, or unpinned into a
+circle around the site icon, stored as the `navigation.menu.mode` user
+preference. It also lists Ghost(Pro) with Settings, moves Help and Feedback to
+the account menu and runs the member map full bleed. On desktop, except for
+Contributors, the admin sits in a frame whose top bar holds the Ghost and View
+site places, search and the site's numbers (Online, Members and MRR, for staff
+with admin access), so View site and search leave the sidebar. The frame closes
+around the editor and automation editor, and its sides retract on View site. Inside the frame, list pages show their title
+large above a sticky header that takes it over as the page scrolls: Admin's
+layout turns this on through Shade's `PageChromeProvider`.
+Settings, the editor, the automation editor, mobile and pages without a
+`PageHeader.Title` keep the usual header. Settings shows its
+navigation inside the same sidebar, pinned without changing the stored mode. Mobile keeps the sidebar sheet, and the flag-off path
+preserves the docked sidebar and the separate Settings sidebar.
+
+The `admin7Design` milestone also sets column headers in a small uppercase label
+style. Section headings on member details, tag details and Settings share one
+style, and member stats and list text follow the prototype. Settings sidebar
+group labels and content headings refine this through `settings-heading`:
+`--font-weight-settings-heading` is 540 and `--tracking-settings-heading` is
+-0.01em. These tokens apply only with the flag on, in both light and dark mode;
+member and tag headings keep their existing size and weight, with slightly
+looser letter spacing through `--tracking-section-heading` at -0.01em.
+
+The `admin7Design` milestone also gives text-entry fields 4px corners and 14px
+text. Checkboxes, radios, Filter bar items and Koenig keep their current look.
+
+The `admin7Design` milestone also makes colored banners a flat color with darker
+shades of it for text and no outline.
+
+The `admin7Design` milestone also gives cards 8px corners and makes large titles
+and the space above them follow the width of the page area.
+
+The `admin7Design` milestone also moves the member detail sidebar to the right with
+Engagement first, and sections sit under larger headings with a line across the
+top instead of a card.
+
+Tag details use the same larger section headings for Details, Meta data and
+Code injection, without horizontal rules beneath them. Code injection stays
+open without an expand/collapse control. Member Details and Engagement also
+omit their heading rules. Both detail screens have a vertical divider midway
+between their desktop columns, hidden when the columns stack.
+Meta data has no helper description under its heading. At desktop widths, the metadata
+column is 400px wide to accommodate previews, with the same 80px gap as member
+details. The columns stack below the sidebarlg breakpoint, with 32px between them.
+Metadata navigation uses underline tabs. Button and button-small tabs
+use a muted selected fill and outlined inactive items with foreground text,
+matching page navigation and Settings preview controls. Metadata fields and previews sit directly on the page without
+an inset background or padding. The flag-off design keeps its underline tabs and
+outlined cards; tag editing, uploads, previews and saving use the same behavior
+in both designs.
+
+With `admin7Design` on, empty tag image slots use Shade's default dashed Dropzone style. Metadata image
+slots use the same field surface as their inputs, giving them a white background
+in light mode. Shared Dropzones use a 1px border, muted prompts, and thin icons;
+ImageUpload leaves its outer surface unclipped. With the flag off, the previous
+2px Dropzone border, prompt/icon styling, ImageUpload clipping, Unsplash hover
+styling, and PageMenu fit calculation remain. The legacy code-injection
+accordion retains its original expand/collapse behavior without auto-scroll.
+
+The `admin7CustomizeFromViewSite` experiment adds Customize to the frame's top
+bar on View site, opening the Design settings in a panel over a live, browsable
+preview of the site, with its state in the URL (`/site?customize`). It needs
+`admin7Design` for the frame and is only for staff who can edit the design, on
+desktop. It has its own flag because it may ship apart from Admin 7.
+
+The editor improvements milestone is generally available in Admin. Core keeps
+`admin7EditorImprovements` in `GA_FEATURES` for older Admin builds. It improves
+the post and page editor, independent of `admin7Design`. While the writer types
+in the title, excerpt or body, the editor's chrome fades out: the header's status
+and actions, the settings toggle, the word count and email size warning, and the
+empty feature image bar. The back link and an existing feature image stay. Moving the pointer more than a few
+pixels, scrolling with a wheel or trackpad, focusing anything outside the
+writing area or an unused Esc brings it back. Nothing hides while the settings
+panel is open or moving, while the status line reports a failed save or
+newsletter, or on touch and small screens. The chrome keeps its place, stays
+focusable and takes no pointer input while hidden. The milestone also trims the
+chrome itself: the back link shows its arrow alone, the editor font and the
+guide to the editor leave the footer for the settings panel, and the meta data
+and social cards share one pane with a tab each.
+
+## How values are resolved
+
+For normal Labs flags, later sources in this list override earlier ones:
+
+```text
+stored Labs setting → GA default → remote override → config.labs → Admin session override
+```
+
+An explicit `config.labs` value wins on the server. An Admin session override
+can then force the flag on in the client only; it cannot force it off or change
+the server value. The special `members` value is derived from the members
+signup setting rather than these flag lists.
+
+Ghost also supports an opt-in remote override source. It is inactive unless an
+operator configures it, so normal self-hosted installations continue to use
+their local settings and configuration.
+
+The remote manifest is sparse: an absent key has no opinion. A boolean applies
+an override to every instance using that manifest, while a `{value, percent}`
+entry applies it to a stable approximate percentage. Percentage buckets use
+the flag name and site UUID, so increasing a percentage keeps sites already in
+the rollout and adds more.
+
+Unknown flag names are accepted deliberately because Admin and Ghost Core may
+deploy at different times. Code which reads a new key still has to be deployed;
+the manifest only supplies its value. Invalid entries are ignored, and a fetch
+or parse failure keeps the last known good overrides.
+
+## Admin session overrides
+
+To preview a flagged Admin feature, add `labs` to the query string inside the
+Admin hash route, for example `/ghost/#/members?labs=importMemberTier`. Use
+comma-separated names (`?labs=importMemberTier,apps`) or repeated
+parameters (`?labs=importMemberTier&labs=apps`) to enable multiple flags.
+
+Admin stores the list in `sessionStorage` under `ghost-admin:labs-overrides`.
+It persists across navigation and reloads in the same tab for that browser
+session. A URL without `labs` reuses the stored list; a URL with `labs` replaces
+the whole list rather than adding to it. Visit a route with an empty value,
+such as `/ghost/#/posts?labs=`, to clear the overrides. Simply removing the
+parameter does not clear them.
+
+On an installed app's page (`/ghost/#/apps/<installation id>/…`), the query
+belongs to the app, so Admin doesn't read `labs` from it. Overrides that are
+already set stay in effect. Admin's own screens under `/apps/`, such as
+`/apps/install`, read `labs` as usual.
+
+These overrides only force flags on. `useFeatureFlag` honors them even when the
+server-computed value is `false`. There is no force-off syntax; clearing an
+override restores the normal value, which may still be `true`. If session storage is unavailable, the URL
+override still applies to the current render, but cannot persist.
+
+Session overrides are client-only: they do not update the site's stored Labs
+setting or change Ghost Core's flag resolution. They cannot enable a gated
+server endpoint, change theme behavior, or supply missing backend support.
+Use them for Admin-only previews; features that also depend on server-side
+flags still need those flags enabled on the server, and Admin must still
+check backend compatibility.
+
+## Test both states
+
+Tests should prove the behavior controlled by the flag, not only that the flag
+can be read.
+
+- Stub `labs.isSet` in focused Ghost Core unit tests.
+- Pass Labs values to shared Admin fixtures with
+  `configResponse({labs: {...}})` or `settingsResponse({labs: {...}})`.
+- Use `test.use({labs: {myFeature: true}})` or an explicit `false` in top-level
+  Playwright tests.
+- Cover the flag-off state and any older-server state in Admin acceptance tests.
+
+### Defaults by test suite
+
+The different test systems do not use the same Labs defaults:
+
+| Tests                                                                               | Default after setup                                                                            |
+| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Ghost Core unit tests                                                               | No flags are forced on; stub the value needed by the test                                      |
+| Ghost Core `integration` and `legacy` tests using `testUtils.setup()`               | Every registered private and public beta flag is forced on                                     |
+| Ghost Core `e2e`, `e2e-api`, and `e2e-isolated` tests using `fixtureManager.init()` | Every registered private and public beta flag is forced on                                     |
+| Admin unit and acceptance tests using the shared test-data fixtures                 | `labsDefaults` flags off, `GA_FEATURES` on; pass a `labs` override for the case under test     |
+| Top-level Playwright tests in `e2e/`                                                | Labs uses the new site's values; only flags passed through `test.use({labs: ...})` are changed |
+
+Ghost Core's common fixture initializer adds `labs:enabled` to every fixture
+initialization. That operation writes `true` for every key in
+`WRITABLE_KEYS_ALLOWLIST`, which includes both `PRIVATE_FEATURES` and
+`PUBLIC_BETA_FEATURES`. The Vitest project alone does not enable flags: the
+behavior is triggered when a test calls `fixtureManager.init()` or
+`testUtils.setup()`.
+
+This ensures flagged code paths are exercised in Ghost Core's database-backed
+tests, but it also means adding a flag can change API snapshots even though the
+flag defaults off in production. Add explicit flag-off coverage where the old
+path matters. Flags in `GA_FEATURES` default to on in every runtime, including
+tests, until they are removed or overridden by configuration.
+
+When adding, promoting, or removing a flag, update the affected snapshots from
+`ghost/`:
+
+```bash
+pnpm test:single test/e2e-api/admin/config.test.js -u
+pnpm test:single test/e2e-api/admin/settings.test.js -u
+```
+
+Review the snapshot changes and confirm they only reflect the intended Labs
+keys and values.
+
+## Promote and remove a flag
+
+When a feature is ready for general availability:
+
+1. Move the key from `PRIVATE_FEATURES` or `PUBLIC_BETA_FEATURES` to
+   `GA_FEATURES`.
+2. Remove its Admin toggle.
+3. Verify the feature with the GA value and update the API snapshots.
+4. Follow up promptly by deleting the flag, the disabled code path, and tests
+   which exist only to exercise that obsolete path.
+
+Before removing the disabled path, confirm that every supported deployment can
+run the enabled behavior and that the flag is not masking a permanent
+configuration, compatibility, permission, or availability condition.

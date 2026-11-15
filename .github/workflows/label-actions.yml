@@ -7,7 +7,7 @@ on:
   pull_request_target:
     types: [opened, closed, labeled]
   schedule:
-    - cron:  '0 * * * *'
+    - cron: '0 * * * *'
 
 permissions:
   issues: write
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   action:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     if: github.repository_owner == 'TryGhost'
     steps:
-      - uses: tryghost/actions/actions/label-actions@2eaff8db960655334661c350f557b8d798ec8d27 # main
+      - uses: tryghost/actions/actions/label-actions@bcd9d3edaa1250608a4394ebb5863e8db37c87d9 # main

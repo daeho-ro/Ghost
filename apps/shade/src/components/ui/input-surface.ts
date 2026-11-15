@@ -1,9 +1,9 @@
-import {cn} from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 /**
  * Shared visual recipe for input-like surfaces (Input, Textarea, InputGroup, Select trigger).
  *
- * The recipe owns: border, background, radius, transition, focus ring, invalid state.
+ * The recipe owns: border, background, radius, shadow, transition, focus ring, invalid state.
  * Consumers add their own size, padding, typography, and component-specific tweaks.
  *
  * `inputSurface()` covers the two common shapes:
@@ -33,30 +33,32 @@ import {cn} from '@/lib/utils';
  *   )} />
  */
 export const inputSurfaceClasses = {
-    base: 'rounded-md border border-control-border bg-surface-elevated transition-colors dark:bg-transparent',
-    focusSelf:
-        'focus-visible:outline-hidden focus-visible:bg-transparent focus-visible:border-focus-ring focus-visible:ring-2 focus-visible:ring-focus-ring/25',
-    focusWithin:
-        'has-[:focus-visible]:outline-hidden has-[:focus-visible]:bg-transparent has-[:focus-visible]:border-focus-ring has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus-ring/25',
-    invalidSelf:
-        'aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-destructive/20 dark:aria-[invalid=true]:ring-destructive/40',
-    invalidWithin:
-        'has-[[aria-invalid=true]]:border-destructive has-[[aria-invalid=true]]:ring-destructive/20 dark:has-[[aria-invalid=true]]:ring-destructive/40',
-    disabledSelf: 'disabled:cursor-not-allowed disabled:opacity-50'
+  base: 'rounded-field border border-field-border bg-field-surface shadow-field transition-colors',
+  focusSelf:
+    'focus-visible:outline-hidden focus-visible:border-focus-ring focus-visible:ring-2 focus-visible:ring-focus-ring/25',
+  focusWithin:
+    'has-[:focus-visible]:outline-hidden has-[:focus-visible]:border-focus-ring has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus-ring/25',
+  invalidSelf:
+    'aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-destructive/20 dark:aria-[invalid=true]:ring-destructive/40',
+  invalidWithin:
+    'has-[[aria-invalid=true]]:border-destructive has-[[aria-invalid=true]]:ring-destructive/20 dark:has-[[aria-invalid=true]]:ring-destructive/40',
+  disabledSelf: 'disabled:cursor-not-allowed disabled:opacity-50',
+  disabledFieldSelf:
+    'disabled:bg-field-disabled-surface disabled:text-muted-foreground disabled:opacity-100 disabled:hover:bg-field-disabled-surface',
 } as const;
 
 export function inputSurface(mode: 'self' | 'within' = 'self') {
-    if (mode === 'self') {
-        return cn(
-            inputSurfaceClasses.base,
-            inputSurfaceClasses.focusSelf,
-            inputSurfaceClasses.invalidSelf,
-            inputSurfaceClasses.disabledSelf
-        );
-    }
+  if (mode === 'self') {
     return cn(
-        inputSurfaceClasses.base,
-        inputSurfaceClasses.focusWithin,
-        inputSurfaceClasses.invalidWithin
+      inputSurfaceClasses.base,
+      inputSurfaceClasses.focusSelf,
+      inputSurfaceClasses.invalidSelf,
+      inputSurfaceClasses.disabledSelf,
     );
+  }
+  return cn(
+    inputSurfaceClasses.base,
+    inputSurfaceClasses.focusWithin,
+    inputSurfaceClasses.invalidWithin,
+  );
 }

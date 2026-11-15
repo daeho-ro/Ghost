@@ -1,12 +1,25 @@
 {
+  "env": {
+    "NX_DEFAULT_OUTPUT_STYLE": "static-failures-only"
+  },
   "hooks": {
-    "PreToolUse": [
+    "SessionStart": [
       {
-        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "jq -c '{hookSpecificOutput:{hookEventName:\"PreToolUse\",updatedInput:{command:(\"[ -s ~/.nvm/nvm.sh ] && . ~/.nvm/nvm.sh >/dev/null 2>&1 && nvm use >/dev/null 2>&1; \" + .tool_input.command)}}}'"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/nvm-path.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "startup|resume|fork",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/worktree-setup.sh\"",
+            "timeout": 600,
+            "statusMessage": "Bootstrapping Ghost checkout if needed…"
           }
         ]
       }
